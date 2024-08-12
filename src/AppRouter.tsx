@@ -6,19 +6,39 @@ import RegisterComponent from './components/specific/RegisterComponent';
 import SearchComponent from './components/specific/SearchComponent';
 import UploadComponent from './components/specific/UploadComponent';
 import EnterOtpComponent from './components/specific/EnterOtpComponent';
-
+import NavBar from './components/specific/NavBar';
 
 const AppRouter: React.FC = () => {
   return (
     <Router>
-      <Routes>
-        <Route  path="/" element={<LoginComponent/>} />
-        <Route  path="/login" element={<LoginComponent/>} />
-        <Route path="/register" element={<RegisterComponent/>} />
-        <Route path="/search" element={<SearchComponent/>} />
-        <Route path="/upload" element={<UploadComponent/>} />
-        <Route path="/enter_otp" element={<EnterOtpComponent/>} />
-      </Routes>
+      <div>
+        <Routes>
+          <Route path="/" element={<LoginComponent />} />
+          <Route path="/login" element={<LoginComponent />} />
+          <Route path="/register" element={<RegisterComponent />} />
+          <Route path="/enter_otp" element={<EnterOtpComponent />} />
+          
+          {/* For routes where NavBar should be displayed */}
+          <Route
+            path="/search"
+            element={
+              <div>
+                <NavBar />
+                <SearchComponent />
+              </div>
+            }
+          />
+          <Route
+            path="/upload"
+            element={
+              <div>
+                <NavBar />
+                <UploadComponent />
+              </div>
+            }
+          />
+        </Routes>
+      </div>
     </Router>
   );
 };

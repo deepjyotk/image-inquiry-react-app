@@ -1,30 +1,60 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import config from '../../config';
+import config from '../../config.js';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useNavigate } from 'react-router-dom'; // or useNavigate from react-router-dom v6
+
 
 const SearchComponent: React.FC = () => {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const navigate = useNavigate(); // or useNavigate from react-router-dom v6
+
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
 
+
+    const token = localStorage.getItem('idToken');
+
     try {
-      const response = await axios.post(`${config.apiBaseUrl}/search`, 
-         {
-          query : query,
+      const response = await axios.post(
+        `${config.API_BASE_URL}/search`,
+        {
+          query: query,
           custom_label: '',
+        },
+        {
+          headers: {
+            'auth-token': token ? token : ''
+          }
         });
 
       if (response.status === 200) {
         setImageUrls(response.data); // Assuming the response has a field 'imageUrls'
+        toast.success('Images fetched successfully');
       } else {
         console.error('Error fetching images:', response.statusText);
+        toast.error('Error fetching images. Please try again.');
       }
     } catch (error) {
-      console.error('Error:', error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Handle 401 Unauthorized
+        localStorage.removeItem('idToken'); // Remove the expired token
+        toast.error('Session expired. Please login again.');
+        setTimeout(() => {
+          navigate('/login'); 
+        }, 2000);
+        
+        // You may choose to navigate to the login page using a library like react-router-dom
+         
+      } else {
+        console.error('Error:', error);
+        toast.error('An error occurred while fetching images.');
+      }
     } finally {
       setLoading(false);
     }
@@ -64,6 +94,7 @@ const SearchComponent: React.FC = () => {
           </div>
         ))}
       </div>
+      <ToastContainer />
     </div>
   );
 };

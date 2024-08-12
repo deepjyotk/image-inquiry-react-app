@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'; // or useNavigate from react-rou
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import config from '../../config'; // Ensure you have your config file set up
+import config from '../../config.js'; // Ensure you have your config file set up
 
 const RegisterComponent: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -38,7 +38,7 @@ const RegisterComponent: React.FC = () => {
     const name = `${firstName} ${lastName}`;
 
     try {
-      const response = await axios.post(`${config.apiBaseUrl}/auth/register`, {
+      const response = await axios.post(`${config.API_BASE_URL}/auth/register`, {
         name,
         password,
         email

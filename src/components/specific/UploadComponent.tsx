@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // Ensure you are using react-router-dom for navigation
+import { useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import config from '../../config.js';
 
 interface Label {
   id: number;
@@ -14,8 +17,8 @@ const UploadComponent: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [labelInput, setLabelInput] = useState('');
   const [showCustomLabel, setShowCustomLabel] = useState(false);
-  const [showGenerateButton, setShowGenerateButton] = useState(true);
-  const [imageId, setImageId] = useState(null);
+  const [imageId, setImageId] = useState<string | null>(null);
+  const [isLabelsGenerated, setIsLabelsGenerated] = useState(false);
   const navigate = useNavigate();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,49 +26,51 @@ const UploadComponent: React.FC = () => {
     if (selectedFile && (selectedFile.type === 'image/jpeg' || selectedFile.type === 'image/png' || selectedFile.type === 'image/jpg')) {
       setFile(selectedFile);
     } else {
-      alert('Please select a jpeg, jpg, or png file.');
+      toast.error('Please select a jpeg, jpg, or png file.');
     }
   };
 
   const handleGenerateLabels = async () => {
     if (!file) {
-      alert('No file uploaded.');
+      toast.error('No file uploaded.');
       return;
     }
 
     setLoading(true);
-    setShowGenerateButton(false); // Hide the button after clicking
 
     const formData = new FormData();
     formData.append('imagef', file);
     formData.append('filename', file.name);
 
+    const token = localStorage.getItem('idToken');
+
     try {
-      const response = await fetch('https://nre8g0zfrc.execute-api.us-east-1.amazonaws.com/dev/upload/', {
-        method: 'POST',
+      const response = await axios.post(`${config.API_BASE_URL}/upload`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'auth-token': token ? token : '',
           'Accept': '*/*',
           'Accept-Encoding': 'gzip, deflate, br',
           'Connection': 'keep-alive',
-          "x-amazon-apigateway-binary-media-types": "multipart/form-data"
-        },
-        body: formData,
+          'x-amazon-apigateway-binary-media-types': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (!response.ok) {
+      if (!response) {
         throw new Error('Network response was not ok');
       }
 
-      const result = await response.json();
+      const result = await response.data;
       console.log('Response from server:', result);
 
-      // Process the labels from the response
       const labels = result.labels || [];
       setImageId(result.image_id);
       setAiLabels(labels.map((text: string, index: number) => ({ id: index, text })));
+      setIsLabelsGenerated(true); // Toggle the button role
+      toast.success('Labels generated successfully');
     } catch (error) {
       console.error('There was an error!', error);
+      toast.error('An error occurred while generating labels.');
     }
 
     setLoading(false);
@@ -93,27 +98,34 @@ const UploadComponent: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!file) {
-      alert('Please upload a file.');
+      toast.error('Please upload a file.');
       return;
     }
 
     const finalLabels = [...aiLabels, ...customLabels].map(label => label.text);
     const requestBody = {
-      image_id: `${imageId}`, // Replace with the actual image_id if available
+      image_id: `${imageId}`,
       final_labels: finalLabels
     };
 
+    const token = localStorage.getItem('idToken');
+
     try {
-      const response = await axios.post('https://nre8g0zfrc.execute-api.us-east-1.amazonaws.com/dev/upload2', requestBody);
+      const response = await axios.post(`${config.API_BASE_URL}/upload2`, requestBody, {
+        headers: {
+          'auth-token': token ? token : ''
+        }
+      });
       if (response.status === 200) {
+        toast.success('Data submitted successfully');
         navigate('/search');
       } else {
         console.error('Error:', response);
-        alert('An error occurred while submitting the data.');
+        toast.error('An error occurred while submitting the data.');
       }
     } catch (error) {
       console.error('There was an error!', error);
-      alert('An error occurred while submitting the data.');
+      toast.error('An error occurred while submitting the data.');
     }
   };
 
@@ -124,6 +136,7 @@ const UploadComponent: React.FC = () => {
           <label htmlFor="file-upload" className="block text-sm font-medium text-text">
             Upload Image
           </label>
+
           <input
             type="file"
             id="file-upload"
@@ -132,17 +145,7 @@ const UploadComponent: React.FC = () => {
             className="mt-1 p-2 w-full bg-background border border-secondary rounded focus:outline-none focus:border-primary"
           />
         </div>
-        {showGenerateButton && (
-          <button
-            onClick={handleGenerateLabels}
-            className={`w-full py-2 px-4 mb-4 bg-primary text-text rounded focus:outline-none focus:bg-secondary ${
-              !file ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary'
-            }`}
-            disabled={!file} // Disable the button if no file is uploaded
-          >
-            {loading ? 'Generating Labels...' : 'Get AI Generated Labels'}
-          </button>
-        )}
+
         {loading && <div className="text-center">Loading...</div>}
         {showCustomLabel && !loading && (
           <div className="mb-4">
@@ -166,9 +169,11 @@ const UploadComponent: React.FC = () => {
           </div>
         )}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-text">
+
+          {isLabelsGenerated ? (  <label className="block text-sm font-medium text-text">
             Labels
-          </label>
+          </label>) : null}
+        
           <div className="flex flex-wrap mt-2">
             {[...aiLabels, ...customLabels].map(label => (
               <div key={label.id} className="m-1 px-2 py-1 bg-secondary text-background rounded-full flex items-center">
@@ -182,14 +187,18 @@ const UploadComponent: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
-        <button
-          onClick={handleSubmit}
-          className="w-full py-2 px-4 bg-primary text-text rounded hover:bg-secondary focus:outline-none focus:bg-secondary"
+          <button
+          onClick={isLabelsGenerated ? handleSubmit : handleGenerateLabels}
+          className={`w-full py-2 px-4 mb-4 bg-primary text-text rounded focus:outline-none focus:bg-secondary ${
+            !file ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary'
+          }`}
+          disabled={!file}
         >
-          Submit
+          {loading ? 'Processing...' : isLabelsGenerated ? 'Upload' : 'Get AI Generated Labels'}
         </button>
+        </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

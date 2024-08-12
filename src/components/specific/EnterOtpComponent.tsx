@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom'; // or useNavigate from react-router-dom v6
 import axios from 'axios';
-import config from '../../config'; // Ensure you have your config file set up
+import config from '../../config.js'; // Ensure you have your config file set up
 
 const EnterOtpComponent: React.FC = () => {
   const [otp, setOtp] = useState('');
@@ -25,12 +25,13 @@ const EnterOtpComponent: React.FC = () => {
     }
 
     try {
-      const response = await axios.post(`${config.apiBaseUrl}/auth/confirm`, {
+      const response = await axios.post(`${config.API_BASE_URL}/auth/confirm`, {
         email,
         confirmation_code: otp,
       });
       if (response.status === 200) {
-        navigate('/search'); // Navigate to the next component/page
+        navigate('/login'); 
+          // Navigate to the next component/page
       }
     } catch (error) {
       console.error('OTP verification failed:', error);
